@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+
+  airflow-init:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags:cached
+      - ./logs:/opt/airflow/logs:cached
+      - ./plugins:/opt/airflow/plugins:cached
+      - ./scripts:/opt/airflow/scripts:cached
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create
+      --username admin
+      --password admin
+      --firstname Admin
+      --lastname User
+      --role Admin
+      --email admin@example.com
+      "
+
+  airflow-webserver:
+    build: .
+    depends_on:
+      - postgres
+      - airflow-init
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./dags:/opt/airflow/dags:cached
+      - ./logs:/opt/airflow/logs:cached
+      - ./plugins:/opt/airflow/plugins:cached
+      - ./scripts:/opt/airflow/scripts:cached
+      - ./scripts/.env:/opt/airflow/scripts/.env:ro
+    command: bash -c "rm -f /opt/airflow/airflow-webserver.pid && airflow webserver"
+
+  airflow-scheduler:
+    build: .
+    depends_on:
+      - postgres
+      - airflow-init
+    restart: always
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./dags:/opt/airflow/dags:cached
+      - ./logs:/opt/airflow/logs:cached
+      - ./plugins:/opt/airflow/plugins:cached
+      - ./scripts:/opt/airflow/scripts:cached
+      - ./scripts/.env:/opt/airflow/scripts/.env:ro
+    command: scheduler
+
+volumes:
+  postgres-db-volume:

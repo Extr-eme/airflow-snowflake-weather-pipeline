@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Airflow runtime
+logs/
+airflow.db
+
+# Generated data files
+*.csv
+
+# Secrets
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Docker temp
+*.pid
